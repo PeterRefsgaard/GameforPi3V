@@ -4,60 +4,72 @@ using UnityEngine;
 
 public class ThirdPersonMovement : MonoBehaviour
 {
+    [Header("Refs")]
     public CharacterController controller;
-    public Transform cam;
-   
-    public float gravity = -1f;
-    public float jumpHeight = 13f;
+    public Transform cam;   // not used for movement now, but you can keep it
 
+    [Header("Movement")]
+    public float speed = 6f;
+    public float rotationSpeed = 360f;   // degrees per second
+
+    [Header("Jump / Gravity")]
+    public float gravity = -9.81f;
+    public float jumpHeight = 2f;
+
+    [Header("Ground Check")]
     public Transform groundCheck;
-    public float groundDistance = 0.4f;
+    public float groundDistance = 0.3f;
     public LayerMask groundMask;
-    
-    private Vector3 velocity;
-    private bool isGrounded;
-   
-    public float speed = 12f;
-   
-    public float turnSmoothTime = 0.1f;
-    float turnSmoothVelocity;
-   
-   
-    // Update is called once per frame
+
+    Vector3 velocity;
+    bool isGrounded;
+
     void Update()
     {
-        
+        // --- Ground check ---
         isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
 
         if (isGrounded && velocity.y < 0)
         {
             velocity.y = -2f;
         }
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
-        Vector3 direction = new Vector3(horizontal, 0f, vertical).normalized;
 
-        if (direction.magnitude >= 0.1f)
+        // --- Input ---
+        float horizontal = Input.GetAxisRaw("Horizontal"); // A/D -> rotation
+        float vertical = Input.GetAxisRaw("Vertical");   // W/S -> forward/back
+
+        // --- Rotation (A/D) ---
+        if (Mathf.Abs(horizontal) > 0.1f)
         {
-            float targetAngle = Mathf.Atan2(direction.x, direction.z)* Mathf.Rad2Deg + cam.eulerAngles.y;
-            float angle = Mathf.SmoothDampAngle(transform.eulerAngles.y, targetAngle, ref turnSmoothVelocity, turnSmoothTime);
-            transform.rotation = Quaternion.Euler(0f, angle, 0f);
-            
-            Vector3 moveDir = Quaternion.Euler(0f, targetAngle, 0f) * Vector3.forward;
-            controller.Move(moveDir.normalized  * speed * Time.deltaTime);
-        }
-        if (Input.GetButtonDown("Jump"))
-        {
-            Debug.Log("Jump button pressed");
+            // rotate around Y axis
+            float turnAmount = horizontal * rotationSpeed * Time.deltaTime;
+            transform.Rotate(0f, turnAmount, 0f);
         }
 
-        if (Input.GetButtonDown("Jump") && isGrounded)
+        // --- Forward/back movement (W/S) ---
+        Vector3 moveDir = transform.forward * vertical;
+
+        if (Mathf.Abs(vertical) > 0.1f)
+        {
+            controller.Move(moveDir * speed * Time.deltaTime);
+        }
+
+        // --- Jump (Space) ---
+        if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
 
+        // --- Gravity ---
         velocity.y += gravity * Time.deltaTime;
-
         controller.Move(velocity * Time.deltaTime);
+    }
+
+    void OnDrawGizmosSelected()
+    {
+        if (groundCheck == null) return;
+
+        Gizmos.color = Color.yellow;
+        Gizmos.DrawWireSphere(groundCheck.position, groundDistance);
     }
 }
