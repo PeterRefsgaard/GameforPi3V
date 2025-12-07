@@ -5,14 +5,14 @@ public class ViewSwitcher : MonoBehaviour
     public Camera thirdPersonCam;
     public Camera firstPersonCam;
 
-    // Any renderers you want to HIDE in first person
+    
     public Renderer[] renderersToHideInFirstPerson;
 
     bool isFirstPerson = false;
 
     void Start()
     {
-        SetView(false); // start in third person
+        SetView(false); 
     }
 
     void Update()
@@ -26,11 +26,11 @@ public class ViewSwitcher : MonoBehaviour
 
     void SetView(bool firstPerson)
     {
-        // Cameras
+        
         thirdPersonCam.enabled = !firstPerson;
         firstPersonCam.enabled = firstPerson;
 
-        // Hide/show selected renderers (e.g. head)
+        
         if (renderersToHideInFirstPerson != null)
         {
             foreach (var r in renderersToHideInFirstPerson)
