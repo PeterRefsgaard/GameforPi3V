@@ -1,16 +1,14 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class ThirdPersonMovement : MonoBehaviour
 {
     [Header("Refs")]
     public CharacterController controller;
-    public Transform cam;   // not used for movement now, but you can keep it
+    public Transform cam;   // same camera you use for look
 
     [Header("Movement")]
     public float speed = 6f;
-    public float rotationSpeed = 360f;   // degrees per second
+    public float rotationSpeed = 360f;   // tank rotation speed (no RMB)
 
     [Header("Jump / Gravity")]
     public float gravity = -9.81f;
@@ -24,6 +22,12 @@ public class ThirdPersonMovement : MonoBehaviour
     Vector3 velocity;
     bool isGrounded;
 
+    public bool IsGrounded()
+    {
+        return isGrounded;
+    }
+
+
     void Update()
     {
         // --- Ground check ---
@@ -35,32 +39,65 @@ public class ThirdPersonMovement : MonoBehaviour
         }
 
         // --- Input ---
-        float horizontal = Input.GetAxisRaw("Horizontal"); // A/D -> rotation
-        float vertical = Input.GetAxisRaw("Vertical");   // W/S -> forward/back
+        float horizontal = Input.GetAxisRaw("Horizontal"); // A/D
+        float vertical = Input.GetAxisRaw("Vertical");   // W/S
 
-        // --- Rotation (A/D) ---
-        if (Mathf.Abs(horizontal) > 0.1f)
+        bool rightMouseHeld = Input.GetMouseButton(1);
+
+        // =========================
+        // MOVEMENT
+        // =========================
+        if (rightMouseHeld)
         {
-            // rotate around Y axis
-            float turnAmount = horizontal * rotationSpeed * Time.deltaTime;
-            transform.Rotate(0f, turnAmount, 0f);
+            // FREE-LOOK MODE: move relative to camera direction, no tank-rotate from A/D
+
+            // flatten camera forward/right so we don't tilt up/down
+            Vector3 camForward = cam.forward;
+            Vector3 camRight = cam.right;
+            camForward.y = 0f;
+            camRight.y = 0f;
+            camForward.Normalize();
+            camRight.Normalize();
+
+            Vector3 moveDir = camForward * vertical + camRight * horizontal;
+
+            if (moveDir.sqrMagnitude > 0.01f)
+            {
+                moveDir.Normalize();
+                controller.Move(moveDir * speed * Time.deltaTime);
+            }
+            // rotation while RMB is held is handled by your MouseLook script (playerBody.Rotate)
+        }
+        else
+        {
+            // TANK MODE: A/D rotate character, W/S move forward/back
+
+            // rotate with A/D
+            if (Mathf.Abs(horizontal) > 0.1f)
+            {
+                float turnAmount = horizontal * rotationSpeed * Time.deltaTime;
+                transform.Rotate(0f, turnAmount, 0f);
+            }
+
+            // move forward/back with W/S
+            if (Mathf.Abs(vertical) > 0.1f)
+            {
+                Vector3 moveDir = transform.forward * vertical;
+                controller.Move(moveDir * speed * Time.deltaTime);
+            }
         }
 
-        // --- Forward/back movement (W/S) ---
-        Vector3 moveDir = transform.forward * vertical;
-
-        if (Mathf.Abs(vertical) > 0.1f)
-        {
-            controller.Move(moveDir * speed * Time.deltaTime);
-        }
-
-        // --- Jump (Space) ---
+        // =========================
+        // JUMP
+        // =========================
         if (Input.GetKeyDown(KeyCode.Space) && isGrounded)
         {
             velocity.y = Mathf.Sqrt(jumpHeight * -2f * gravity);
         }
 
-        // --- Gravity ---
+        // =========================
+        // GRAVITY
+        // =========================
         velocity.y += gravity * Time.deltaTime;
         controller.Move(velocity * Time.deltaTime);
     }
@@ -73,3 +110,4 @@ public class ThirdPersonMovement : MonoBehaviour
         Gizmos.DrawWireSphere(groundCheck.position, groundDistance);
     }
 }
+
